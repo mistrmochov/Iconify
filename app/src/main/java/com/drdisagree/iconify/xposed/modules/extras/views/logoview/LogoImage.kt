@@ -73,11 +73,6 @@ abstract class LogoImage @JvmOverloads constructor(
     fun updateLogo() {
         if (mLogoStyle == 33) {
             loadCustomLogoAsync()
-            if (forceApplyTint) {
-                drawable.setTint(mTintColor)
-            } else {
-                drawable.clearColorFilter()
-            }
             return
         }
 
@@ -140,7 +135,11 @@ abstract class LogoImage @JvmOverloads constructor(
             }
 
             withContext(Dispatchers.Main) {
-                drawable.clearColorFilter()
+                if (forceApplyTint) {
+                    drawable.setTint(mTintColor)
+                } else {
+                    drawable.clearColorFilter()
+                }
                 setImageDrawable(drawable)
             }
         }
