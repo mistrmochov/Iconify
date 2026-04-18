@@ -391,7 +391,7 @@ class StatusbarMisc(context: Context) : ModPack(context) {
                         reAddView(container)
                         statusBarClock?.setPaddingRelative(0, 0, 0, 0)
                         (statusBarClock?.layoutParams as? ViewGroup.MarginLayoutParams)
-                            ?.setMargins(0, 0, 0, 0)
+                            ?.setMargins(0, 0, 120, 0)
                         (statusBarClock?.layoutParams as? LinearLayout.LayoutParams)?.gravity =
                             Gravity.CENTER
                     }
