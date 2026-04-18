@@ -47,7 +47,7 @@ abstract class LogoImage @JvmOverloads constructor(
     private var mShowLogo = false
     var mLogoPosition: Int = 0
     private var mLogoStyle = 0
-    private var forceApplyTint = false
+    private var forceApplyTint = true
     var mTintColor = Color.WHITE
 
     protected abstract val isLogoVisible: Boolean
@@ -150,7 +150,7 @@ abstract class LogoImage @JvmOverloads constructor(
         mShowLogo = showLogo
         mLogoPosition = logoPosition
         mLogoStyle = logoStyle
-        forceApplyTint = applyTint
+        forceApplyTint = true
 
         if (!mShowLogo || !isLogoVisible) {
             setImageDrawable(null)
