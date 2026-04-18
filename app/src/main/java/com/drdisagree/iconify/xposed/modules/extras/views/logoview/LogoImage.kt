@@ -71,7 +71,10 @@ abstract class LogoImage @JvmOverloads constructor(
     @Suppress("deprecation")
     @SuppressLint("UseCompatLoadingForDrawables")
     fun updateLogo() {
-        var requiresTint = true
+        if (mLogoStyle == 33) {
+            loadCustomLogoAsync()
+            return
+        }
 
         val drawable = when (mLogoStyle) {
             0 -> modRes.getDrawable(R.drawable.ic_statusbar_logo_android)
@@ -107,18 +110,6 @@ abstract class LogoImage @JvmOverloads constructor(
             30 -> modRes.getDrawable(R.drawable.ic_statusbar_logo_ubuntu)
             31 -> modRes.getDrawable(R.drawable.ic_statusbar_logo_mint)
             32 -> modRes.getDrawable(R.drawable.ic_statusbar_logo_amogus)
-            33 -> {
-                try {
-                    val drawable = ImageDecoder.decodeDrawable(
-                        ImageDecoder.createSource(STATUSBAR_LOGO_FILE)
-                    ).toCircularDrawable(mContext)
-
-                    requiresTint = false
-                    drawable
-                } catch (_: Throwable) {
-                    modRes.getDrawable(R.drawable.ic_android_logo)
-                }
-            }
             else -> modRes.getDrawable(R.drawable.ic_statusbar_logo_android)
         }
 
