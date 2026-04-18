@@ -73,6 +73,11 @@ abstract class LogoImage @JvmOverloads constructor(
     fun updateLogo() {
         if (mLogoStyle == 33) {
             loadCustomLogoAsync()
+            if (forceApplyTint) {
+                drawable.setTint(mTintColor)
+            } else {
+                drawable.clearColorFilter()
+            }
             return
         }
 
