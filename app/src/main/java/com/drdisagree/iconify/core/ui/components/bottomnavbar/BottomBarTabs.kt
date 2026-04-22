@@ -29,6 +29,8 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.drdisagree.iconify.app.navigation.NavRoutes
@@ -56,34 +58,45 @@ fun BottomBarTabs(
     ) {
         Box(modifier = Modifier.padding(horizontal = 12.dp)) {
             SubcomposeLayout { constraints ->
-                val tabPlaceables = tabs.map { tab ->
-                    val measurables = subcompose(tab) {
+                val naturalPlaceables = tabs.mapIndexed { index, tab ->
+                    subcompose("natural_$index") {
                         TabContent(
                             tab = tab,
-                            selected = selectedTab == tabs.indexOf(tab),
+                            selected = selectedTab == index,
                             enabled = isTabEnabled(tab),
                             onTabSelected = onTabSelected
                         )
-                    }
-                    measurables.first().measure(constraints)
+                    }.first().measure(constraints)
                 }
 
-                val naturalMaxWidth = tabPlaceables.maxOf { it.width }
-
-                val maxTotalWidthPx = maxTotalWidth.roundToInt()
+                val naturalMaxWidth = naturalPlaceables.maxOf { it.width }
                 val tabCount = tabs.size
-                val finalTabWidth =
-                    (naturalMaxWidth * tabCount).coerceAtMost(maxTotalWidthPx) / tabCount
+                val maxTotalWidthPx = maxTotalWidth.roundToInt()
 
-                val totalWidth = finalTabWidth * tabCount
-                val layoutHeight = tabPlaceables.maxOf { it.height }
+                val finalTabWidth = (naturalMaxWidth * tabCount)
+                    .coerceAtMost(maxTotalWidthPx) / tabCount
 
-                layout(totalWidth, layoutHeight) {
-                    var xPosition = 0
-                    tabPlaceables.forEach { placeable ->
-                        val yPosition = (layoutHeight - placeable.height) / 2
-                        placeable.placeRelative(x = xPosition, y = yPosition)
-                        xPosition += finalTabWidth
+                val fixedConstraints = Constraints.fixedWidth(finalTabWidth)
+
+                val finalPlaceables = tabs.mapIndexed { index, tab ->
+                    subcompose("final_$index") {
+                        TabContent(
+                            tab = tab,
+                            selected = selectedTab == index,
+                            enabled = isTabEnabled(tab),
+                            onTabSelected = onTabSelected
+                        )
+                    }.first().measure(fixedConstraints)
+                }
+
+                val height = naturalPlaceables.maxOf { it.height }
+
+                layout(finalTabWidth * tabCount, height) {
+                    var x = 0
+                    finalPlaceables.forEach { placeable ->
+                        val y = (height - placeable.height) / 2
+                        placeable.placeRelative(x, y)
+                        x += finalTabWidth
                     }
                 }
             }
@@ -141,6 +154,7 @@ private fun TabContent(
             text = stringResource(tab.title),
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.4f),
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.basicMarquee(Int.MAX_VALUE)
         )
     }
