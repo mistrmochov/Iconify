@@ -9,18 +9,12 @@ import com.drdisagree.iconify.app.MainActivity
 import com.drdisagree.iconify.core.utils.AssetsUtils.readRawResource
 import com.drdisagree.iconify.core.utils.RootUtils.setPermissionsRecursively
 import com.drdisagree.iconify.core.utils.overlay.FabricatedUtils
-import com.drdisagree.iconify.core.utils.overlay.OverlayUtils
 import com.drdisagree.iconify.data.common.Const.SYSTEMUI_PACKAGE
-import com.drdisagree.iconify.data.common.Preferences.COLOR_ACCENT_PRIMARY
-import com.drdisagree.iconify.data.common.Preferences.COLOR_ACCENT_SECONDARY
 import com.drdisagree.iconify.data.common.Preferences.RESTART_SYSUI_AFTER_BOOT
-import com.drdisagree.iconify.data.common.References.ICONIFY_COLOR_ACCENT_PRIMARY
-import com.drdisagree.iconify.data.common.References.ICONIFY_COLOR_ACCENT_SECONDARY
 import com.drdisagree.iconify.data.common.Resources
 import com.drdisagree.iconify.data.common.Resources.MODULE_DIR
 import com.drdisagree.iconify.data.common.Resources.TEMP_MODULE_DIR
 import com.drdisagree.iconify.data.config.RPrefs
-import com.drdisagree.iconify.data.keys.SettingsKey
 import com.drdisagree.iconify.helpers.BackupRestore
 import com.drdisagree.iconify.helpers.replaceAll
 import com.topjohnwu.superuser.Shell
@@ -34,7 +28,7 @@ object ModuleUtils {
 
     private val TAG = ModuleUtils::class.java.simpleName
 
-    fun handleModule(skippedInstallation: Boolean) {
+    suspend fun handleModule(skippedInstallation: Boolean) {
         if (moduleExists()) {
             // Clean temporary directory
             Shell.cmd("rm -rf $TEMP_MODULE_DIR").exec()
@@ -46,7 +40,7 @@ object ModuleUtils {
         installModule(skippedInstallation)
     }
 
-    private fun installModule(skippedInstallation: Boolean) {
+    private suspend fun installModule(skippedInstallation: Boolean) {
         Log.d(TAG, "Module does not exist, creating...")
 
         FileUtils.ensureDirs(TEMP_MODULE_DIR)
@@ -102,58 +96,24 @@ object ModuleUtils {
         }
     }
 
-    private fun writePostExec(skippedInstallation: Boolean) {
+    private suspend fun writePostExec(skippedInstallation: Boolean) {
         val postExec = StringBuilder()
-        var primaryColorEnabled = false
-        var secondaryColorEnabled = false
-        val firstInstall = RPrefs.getBoolean(SettingsKey.FIRST_INSTALL)
-        val map = RPrefs.prefs.all
 
-        for ((key, value) in map) {
-            if (value is Boolean && value && key.startsWith("fabricated")) {
-                try {
-                    val name = key.replace("fabricated", "")
-                    val commands = FabricatedUtils.buildCommands(
-                        RPrefs.getString("FOCMDtarget$name")!!,
-                        RPrefs.getString("FOCMDname$name")!!,
-                        RPrefs.getString("FOCMDtype$name")!!,
-                        RPrefs.getString("FOCMDresourceName$name")!!,
-                        RPrefs.getString("FOCMDval$name")!!
-                    )
+        FabricatedUtils.getAllLatestResources().forEach { resource ->
+            val commands = FabricatedUtils.buildCommands(
+                FabricatedUtils.FabricatedOverlay(
+                    targetPackageName = resource.targetPackageName,
+                    overlayName = resource.overlayName,
+                    resourceType = FabricatedUtils.FabricatedResourceType.from(resource.resourceType),
+                    resourceName = resource.resourceName,
+                    resourceValue = resource.resourceValue
+                )
+            )
 
-                    postExec.append(commands[0]).append('\n').append(commands[1]).append('\n')
-
-                    if (name.contains(COLOR_ACCENT_PRIMARY)) {
-                        primaryColorEnabled = true
-                    } else if (name.contains(COLOR_ACCENT_SECONDARY)) {
-                        secondaryColorEnabled = true
-                    }
-                } catch (_: Exception) {
-                }
-            }
-        }
-
-        if (!firstInstall && shouldUseDefaultColors() && !skippedInstallation) {
-            if (!primaryColorEnabled) {
-                postExec.append("cmd overlay fabricate --target android --name IconifyComponentcolorAccentPrimary android:color/holo_blue_light 0x1c $ICONIFY_COLOR_ACCENT_PRIMARY\n")
-                postExec.append("cmd overlay enable --user current com.android.shell:IconifyComponentcolorAccentPrimary\n")
-                postExec.append("cmd overlay fabricate --target android --name IconifyComponentcolorAccentPrimaryLight android:color/holo_green_light 0x1c $ICONIFY_COLOR_ACCENT_PRIMARY\n")
-                postExec.append("cmd overlay enable --user current com.android.shell:IconifyComponentcolorAccentPrimaryLight\n")
-            }
-            if (!secondaryColorEnabled) {
-                postExec.append("cmd overlay fabricate --target android --name IconifyComponentcolorAccentSecondary android:color/holo_blue_dark 0x1c $ICONIFY_COLOR_ACCENT_SECONDARY\n")
-                postExec.append("cmd overlay enable --user current com.android.shell:IconifyComponentcolorAccentSecondary\n")
-                postExec.append("cmd overlay fabricate --target android --name IconifyComponentcolorAccentSecondaryLight android:color/holo_green_dark 0x1c $ICONIFY_COLOR_ACCENT_SECONDARY\n")
-                postExec.append("cmd overlay enable --user current com.android.shell:IconifyComponentcolorAccentSecondaryLight\n")
-            }
+            postExec.append(commands[0]).append('\n').append(commands[1]).append('\n')
         }
 
         File("$TEMP_MODULE_DIR/post-exec.sh").writeText(postExec.toString())
-    }
-
-    private fun shouldUseDefaultColors(): Boolean {
-        return OverlayUtils.isOverlayDisabled("IconifyComponentAMAC.overlay") &&
-                OverlayUtils.isOverlayDisabled("IconifyComponentAMGC.overlay")
     }
 
     fun moduleExists(): Boolean {
